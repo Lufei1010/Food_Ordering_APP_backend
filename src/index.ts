@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import myUserRoute from "./routes/MyUserRoute";
 import { v2 as cloudinary } from "cloudinary";
 import MyRestaurantRoute from "./routes/MyRestaurantRoute";
-
+import restaurantRoute from "./routes/RestaurantRoute";
 
 console.log(
   "MongoDB Connection String:",
@@ -40,7 +40,8 @@ app.get("/health", async (req: Request, res: Response) => {
 app.use("/api/my/user", myUserRoute);
 // it tells Express to send any requests starting with /api/my/user 
 // to the myUserRoute, which will handle the request with the right logic and database actions.
-app.use("/api/my/restaurant", MyRestaurantRoute)
+app.use("/api/my/restaurant", MyRestaurantRoute);
+app.use("/api/restaurant", restaurantRoute); //public route, can be tested in postman
 
 app.listen(7001, () => {
     console.log("server started on localhost:7001");
