@@ -130,7 +130,7 @@ const createtSession = async (
       restaurantId,
     },
     success_url: `http://localhost:5173/`, // Redirect to the homepage after payment
-    cancel_url: `http://localhost:5173/cancel`,
+    cancel_url: `http://localhost:513/cancel`,
 
     // success_url: `${FRONTEND_URL}/order-status?success=true`,
     // cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
