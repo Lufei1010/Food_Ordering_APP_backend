@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { Request, Response } from "express";
 import Restaurant, { MenuItemType } from "../models/restaurant";
+import Order from "../models/order";
 
 //interact with stripe account
 const STRIPE = new Stripe(process.env.STRIPE_API_KEY as string);
@@ -21,7 +22,7 @@ type CheckoutSessionRequest = {
   restaurantId: string;
 };
 
-//handler
+//checkout session handler
 const createCheckoutSession = async (req: Request, res: Response) => {
   try {
     const checkoutSessionRequest: CheckoutSessionRequest = req.body;
@@ -34,6 +35,17 @@ const createCheckoutSession = async (req: Request, res: Response) => {
     if (!restaurant) {
       throw new Error("Restaurant not found");
     }
+    //link the order to the restaurant we have gotten in the request above
+    //Create a new order below
+    const newOrder = new Order({
+      restaurant: restaurant,
+      user: req.userId,
+      status: "placed",
+      deliveryDetails: checkoutSessionRequest.deliveryDetails,
+      cartItem: checkoutSessionRequest.cartItems,
+      created: new Date(),
+    })
+
     // 2. Create line items for the cart
     const lineItems = createLineItems(
       checkoutSessionRequest,
@@ -42,7 +54,7 @@ const createCheckoutSession = async (req: Request, res: Response) => {
 
     const session = await createtSession(
       lineItems,
-      "TEST_ORDER_ID",
+      newOrder._id.toString(),
       restaurant.deliveryPrice,
       restaurant._id.toString()
     );
@@ -50,6 +62,7 @@ const createCheckoutSession = async (req: Request, res: Response) => {
     if (!session.url) {
       return res.status(500).json({ message: "Error creating sripe session" });
     }
+    await newOrder.save() //commit the new order to database after create checkout session sucessfully
     // Return the Stripe session URL for the frontend to redirect to
     res.json({ url: session.url });
   } catch (error: any) {
@@ -116,8 +129,8 @@ const createtSession = async (
       orderId,
       restaurantId,
     },
-    success_url: `http://localhost:5143/`, // Redirect to the homepage after payment
-    cancel_url: `http://localhost:5143/cancel`,
+    success_url: `http://localhost:5173/`, // Redirect to the homepage after payment
+    cancel_url: `http://localhost:5173/cancel`,
 
     // success_url: `${FRONTEND_URL}/order-status?success=true`,
     // cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
