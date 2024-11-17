@@ -26,6 +26,7 @@ const createCheckoutSession = async (req: Request, res: Response) => {
   try {
     const checkoutSessionRequest: CheckoutSessionRequest = req.body;
 
+    // 1. Fetch the restaurant details
     const restaurant = await Restaurant.findById(
       checkoutSessionRequest.restaurantId
     );
@@ -33,7 +34,7 @@ const createCheckoutSession = async (req: Request, res: Response) => {
     if (!restaurant) {
       throw new Error("Restaurant not found");
     }
-
+    // 2. Create line items for the cart
     const lineItems = createLineItems(
       checkoutSessionRequest,
       restaurant.menuItems
@@ -45,11 +46,12 @@ const createCheckoutSession = async (req: Request, res: Response) => {
       restaurant.deliveryPrice,
       restaurant._id.toString()
     );
-//url on host page on Stripe
-    if(!session.url) {
-      return res.status(500).json({ message: "Error creating sripe session"})
+    //url on host page on Stripe
+    if (!session.url) {
+      return res.status(500).json({ message: "Error creating sripe session" });
     }
-    res.json({ url: session.url })
+    // Return the Stripe session URL for the frontend to redirect to
+    res.json({ url: session.url });
   } catch (error: any) {
     console.log(error);
     res.status(500).json({ message: error.raw.message });
@@ -73,7 +75,7 @@ const createLineItems = (
     // 2. foreach cartItem, convert it to a stripe line item
     const line_item: Stripe.Checkout.SessionCreateParams.LineItem = {
       price_data: {
-        currency: "euro",
+        currency: "eur",
         unit_amount: menuItem.price,
         product_data: {
           name: menuItem.name,
@@ -99,23 +101,26 @@ const createtSession = async (
     line_items: lineItems,
     shipping_options: [
       {
-      shipping_rate_data: {
-        display_name: "Delivery",
-        type: "fixed_amount",
-        fixed_amount: {
-          amount: deliveryPrice,
-          currency: "euro"
-        }
-      }
-      }
+        shipping_rate_data: {
+          display_name: "Delivery",
+          type: "fixed_amount",
+          fixed_amount: {
+            amount: deliveryPrice,
+            currency: "eur",
+          },
+        },
+      },
     ],
     mode: "payment",
     metadata: {
       orderId,
       restaurantId,
     },
-    success_url: `${FRONTEND_URL}/orders-status?success=true`,
-    cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`
+    success_url: `http://localhost:5143/`, // Redirect to the homepage after payment
+    cancel_url: `http://localhost:5143/cancel`,
+
+    // success_url: `${FRONTEND_URL}/order-status?success=true`,
+    // cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
   });
 
   // return the session
