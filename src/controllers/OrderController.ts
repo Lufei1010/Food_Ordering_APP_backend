@@ -6,6 +6,7 @@ import Order from "../models/order";
 //interact with stripe account
 const STRIPE = new Stripe(process.env.STRIPE_API_KEY as string);
 const FRONTEND_URL = process.env.FRONTEND_URL as string;
+const STRIPE_ENDPOINT_SECRET = process.env.STRIPE_WEBHOOK_SECRET as string;
 
 type CheckoutSessionRequest = {
   cartItems: {
@@ -21,6 +22,37 @@ type CheckoutSessionRequest = {
   };
   restaurantId: string;
 };
+
+const stripeWebhookHandler = async (req: Request, res: Response) => {
+  let event;
+
+  try {
+    const sig = req.headers["stripe-signature"];
+    event = STRIPE.webhooks.constructEvent(
+      req.body,
+      sig as string,
+      STRIPE_ENDPOINT_SECRET
+    );
+  } catch (error: any) {
+    console.log(error);
+    return res.status(400).send(`Webhook error: ${error.message}`);
+  }//secure
+
+  if (event.type === "checkout.session.completed") {
+    const order = await Order.findById(event.data.object.metadata?.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.totalAmount = event.data.object.amount_total;
+    order.status = "paid";
+
+    await order.save();
+  }
+  res.status(200).send();
+}; //Tells Stripe the webhook was processed, preventing retries.
+
 
 //checkout session handler
 const createCheckoutSession = async (req: Request, res: Response) => {
@@ -129,11 +161,9 @@ const createtSession = async (
       orderId,
       restaurantId,
     },
-    success_url: `http://localhost:5173/`, // Redirect to the homepage after payment
-    cancel_url: `http://localhost:513/cancel`,
-
+    success_url: `http://localhost:5173`,
     // success_url: `${FRONTEND_URL}/order-status?success=true`,
-    // cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
+    cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
   });
 
   // return the session
@@ -142,5 +172,6 @@ const createtSession = async (
 }
 
 export default {
-  createCheckoutSession
+  createCheckoutSession,
+  stripeWebhookHandler,
 };
