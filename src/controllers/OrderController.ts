@@ -174,8 +174,9 @@ const createtSession = async (
       orderId,
       restaurantId,
     },
-    success_url: `http://localhost:5173`,
-    // success_url: `${FRONTEND_URL}/order-status?success=true`,
+    // success_url: `http://localhost:5173`,
+    
+    success_url: `${FRONTEND_URL}/order-status?success=true`,
     cancel_url: `${FRONTEND_URL}/detail/${restaurantId}?cancelled=true`,
   });
 
@@ -185,7 +186,8 @@ const createtSession = async (
 }
 
 export default {
+  getMyOrder,
   createCheckoutSession,
   stripeWebhookHandler,
-  getMyOrder,
+  
 };
